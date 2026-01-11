@@ -27,7 +27,7 @@ export default function AdminDashboard() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight">Calamity Command Center</h1>
+                <h1 className="text-2xl font-bold tracking-tight">Coordination Center</h1>
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm">
                         <Filter className="mr-2 h-4 w-4" />
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" fontSize={12} tickLine={false} axisLine={false} width={50} />
                                 <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px' }} />
-                                <Bar dataKey="level" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={32} />
+                                <Bar dataKey="level" fill="#f97316" radius={[0, 4, 4, 0]} barSize={32} />
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>

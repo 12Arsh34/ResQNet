@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { SEED_PAYLOADS } from '@/lib/mockIncidents';
 
 export interface Incident {
     id: string;
@@ -14,11 +15,9 @@ export interface Incident {
     timestamp: Timestamp;
 }
 
-const DEFAULT_INCIDENTS: Incident[] = [
-    { id: '1', lat: 40.7128, lng: -74.0060, type: 'Flood', severity: 'Critical', description: 'Flooding in downtown area', timestamp: Timestamp.now() },
-    { id: '2', lat: 40.7200, lng: -73.9900, type: 'Fire', severity: 'High', description: 'Structure fire on 5th Ave', timestamp: Timestamp.now() },
-    { id: '3', lat: 40.7300, lng: -74.0100, type: 'Medical', severity: 'Medium', description: 'Ambulance requested', timestamp: Timestamp.now() },
-];
+import { MOCK_INCIDENTS } from '@/lib/mockIncidents';
+
+const DEFAULT_INCIDENTS: Incident[] = MOCK_INCIDENTS;
 
 export function useIncidents() {
     const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -41,6 +40,43 @@ export function useIncidents() {
                     id: doc.id,
                     ...doc.data()
                 })) as Incident[];
+
+                // If the collection is empty in development, auto-seed demo incidents once per browser session
+                if (snapshot.empty && process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+                    try {
+                        const seededFlag = localStorage.getItem('resqnet:seeded');
+                        if (!seededFlag) {
+                            // Fire and forget, let onSnapshot pick up inserted docs
+                            (async () => {
+                                console.log('Auto-seeding demo incidents...');
+                                try {
+                                    const fireDb = db;
+                                    if (!fireDb) throw new Error('No Firestore instance');
+                                    for (const p of SEED_PAYLOADS) {
+                                        await addDoc(collection(fireDb, 'incidents'), {
+                                            ...p,
+                                            timestamp: serverTimestamp()
+                                        });
+                                        // small delay to simulate streaming activity
+                                        await new Promise(res => setTimeout(res, 200));
+                                    }
+                                    localStorage.setItem('resqnet:seeded', '1');
+                                    console.log('Auto-seed completed.');
+                                } catch (err) {
+                                    console.error('Auto-seed failed', err);
+                                }
+                            })();
+                        }
+                    } catch (err) {
+                        // Ignore localStorage errors in some browsers
+                        console.warn('Auto-seed check failed', err);
+                    }
+
+                    // Show fallback data immediately while seeding completes
+                    setIncidents(DEFAULT_INCIDENTS);
+                    setLoading(false);
+                    return;
+                }
 
                 setIncidents(newIncidents.length > 0 ? newIncidents : DEFAULT_INCIDENTS); // Fallback if DB empty for demo
                 setLoading(false);

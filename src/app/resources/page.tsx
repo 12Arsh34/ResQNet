@@ -6,73 +6,39 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { RequestAidModal } from "@/components/resources/RequestAidModal"
+import { ResourceDashboard } from "@/components/resources/ResourceDashboard"
 import { Search, MapPin, Phone, Clock, Filter, Home, Pill, Droplet, Zap } from "lucide-react"
 import { useState } from "react"
 
-// Mock Data
-const RESOURCES = [
-    {
-        id: 1,
-        name: "Central Community Center",
-        type: "Shelter",
-        status: "Available",
-        capacity: "45/100",
-        distance: "0.8 km",
-        address: "123 Main St, Downtown",
-        phone: "(555) 123-4567",
-        icon: Home,
-        color: "text-blue-500"
-    },
-    {
-        id: 2,
-        name: "St. Mary's Hospital",
-        type: "Medical",
-        status: "Busy",
-        capacity: "Critical",
-        distance: "1.2 km",
-        address: "456 Healer Ave",
-        phone: "(555) 987-6543",
-        icon: Pill,
-        color: "text-red-500"
-    },
-    {
-        id: 3,
-        name: "Northside Water Station",
-        type: "Supplies",
-        status: "Available",
-        capacity: "High",
-        distance: "2.5 km",
-        address: "789 Spring Rd",
-        phone: "N/A",
-        icon: Droplet,
-        color: "text-cyan-500"
-    },
-    {
-        id: 4,
-        name: "Emergency Power Hub",
-        type: "Power",
-        status: "Limited",
-        capacity: "Low",
-        distance: "3.1 km",
-        address: "321 Electric Blvd",
-        phone: "(555) 555-0000",
-        icon: Zap,
-        color: "text-amber-500"
-    },
-    {
-        id: 5,
-        name: "West High School Gym",
-        type: "Shelter",
-        status: "Full",
-        capacity: "200/200",
-        distance: "4.0 km",
-        address: "Schools District 4",
-        phone: "(555) 222-3333",
-        icon: Home,
-        color: "text-blue-500"
-    }
-]
+import { MOCK_PLACES } from '@/lib/mockPlaces'
 
+// Map-based resources (centered on Mumbai). We derive distances and present these as the resources list.
+const mapCenter = { lat: 19.0760, lng: 72.8777 }
+
+function distanceKm(a: { lat: number, lng: number }, b: { lat: number, lng: number }) {
+    const toRad = (v: number) => v * Math.PI / 180
+    const R = 6371
+    const dLat = toRad(b.lat - a.lat)
+    const dLon = toRad(b.lng - a.lng)
+    const la = toRad(a.lat)
+    const lb = toRad(b.lat)
+    const x = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(la) * Math.cos(lb)
+    const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x))
+    return Math.round(R * c * 10) / 10
+}
+
+const RESOURCES = MOCK_PLACES.map(p => ({
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    status: p.available && p.available > 0 ? 'Available' : p.available === 0 ? 'Full' : 'Limited',
+    capacity: p.capacity ? `${p.available ?? '-'} / ${p.capacity}` : 'N/A',
+    distance: `${distanceKm({ lat: p.lat, lng: p.lng }, mapCenter)} km`,
+    address: p.address ?? '',
+    phone: p.phone ?? 'N/A',
+    icon: p.type === 'Medical' ? Pill : p.type === 'Supplies' ? Droplet : p.type === 'Power' ? Zap : Home,
+    color: 'text-primary'
+}))
 const CATEGORIES = ["All", "Shelter", "Medical", "Supplies", "Power"]
 
 export default function ResourcesPage() {
@@ -102,6 +68,11 @@ export default function ResourcesPage() {
                         </Button>
                         <RequestAidModal />
                     </div>
+                </div>
+
+                {/* Resource Dashboard Visualization */}
+                <div className="mb-8">
+                    <ResourceDashboard />
                 </div>
 
                 {/* Search & Filter */}
@@ -161,7 +132,7 @@ function ResourceCard({ resource }: { resource: any }) {
             <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg bg-secondary group-hover:bg-primary/10 transition-colors ${resource.color}`}>
+                        <div className={`p-3 rounded-xl bg-secondary/50 group-hover:bg-primary/10 transition-all transform-gpu float-anim shadow-sm ${resource.color}`}>
                             <Icon className="h-5 w-5" />
                         </div>
                         <div>

@@ -5,16 +5,37 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { MapPin, Camera, AlertTriangle, Send } from "lucide-react"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 export default function ReportIncidentPage() {
     const router = useRouter()
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
+    const [files, setFiles] = useState<{ file: File; preview: string }[]>([])
+
+    useEffect(() => {
+        return () => {
+            // Revoke object URLs on unmount
+            files.forEach(f => URL.revokeObjectURL(f.preview))
+        }
+    }, [files])
+
+    const removeFile = (index: number) => {
+        setFiles((prev) => {
+            const removed = prev[index]
+            if (removed) URL.revokeObjectURL(removed.preview)
+            return prev.filter((_, i) => i !== index)
+        })
+    }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
+        // Collect files into FormData for upload (replace with real upload logic as needed)
+        const formData = new FormData()
+        files.forEach((f) => formData.append('evidence', f.file))
+        console.log('Submitting report with files:', files.map(f => f.file.name))
         setTimeout(() => {
             setIsSubmitting(false)
             router.push('/citizen')
@@ -73,9 +94,61 @@ export default function ReportIncidentPage() {
                                 </div>
                                 <Input className="pl-9" placeholder="Enter location or use current GPS" />
                             </div>
-                            <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-muted/50 transition-colors cursor-pointer">
-                                <Camera className="h-8 w-8 text-muted-foreground mb-2" />
-                                <span className="text-sm font-medium text-muted-foreground">Upload Photo/Video evidence</span>
+                            <div>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    multiple
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const newFiles = Array.from(e.target.files || [])
+                                        if (newFiles.length === 0) return
+                                        // limit to max 8 files
+                                        const allowed = newFiles.slice(0, 8 - files.length)
+                                        const mapped = allowed.map((f) => ({ file: f, preview: URL.createObjectURL(f) }))
+                                        setFiles((prev) => [...prev, ...mapped])
+                                        // reset input so same file can be selected again
+                                        e.currentTarget.value = ''
+                                    }}
+                                />
+
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="border-2 border-dashed rounded-lg p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                                >
+                                    {files.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center text-center p-6">
+                                            <Camera className="h-8 w-8 text-muted-foreground mb-2" />
+                                            <span className="text-sm font-medium text-muted-foreground">Upload Photo/Video evidence</span>
+                                            <span className="text-xs text-muted-foreground mt-2">You can add up to 8 files (images or videos)</span>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {files.map((f, idx) => (
+                                                <div key={idx} className="relative">
+                                                    {f.file.type.startsWith('image/') ? (
+                                                        <img src={f.preview} className="h-24 w-24 object-cover rounded" />
+                                                    ) : (
+                                                        <video src={f.preview} className="h-24 w-24 object-cover rounded" />
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); removeFile(idx) }}
+                                                        className="absolute -top-2 -right-2 bg-background rounded-full p-1 border"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {files.length < 8 && (
+                                                <div className="flex items-center justify-center h-24 w-24 rounded border border-dashed text-sm text-muted-foreground">
+                                                    + Add
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-sm font-medium mb-2 block">Description</label>

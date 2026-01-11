@@ -3,13 +3,16 @@
 import { Navbar } from "@/components/layout/Navbar"
 import LeafletMap from "@/components/map/MapboxMap"
 import { useIncidents } from "@/hooks/useIncidents"
+import { SEED_PAYLOADS } from '@/lib/mockIncidents';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, Flame, Droplet, Users, Filter, RefreshCw } from "lucide-react"
+import { useState } from 'react'
 
 export default function IncidentsPage() {
-    const { incidents, loading } = useIncidents();
+    const { incidents, loading, reportIncident } = useIncidents();
+    const [seeding, setSeeding] = useState(false);
 
     const criticalCount = incidents.filter(i => i.severity === 'Critical').length;
     const highCount = incidents.filter(i => i.severity === 'High').length;
@@ -86,9 +89,40 @@ export default function IncidentsPage() {
                             <CardHeader className="pb-3">
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-sm">Recent Incidents</CardTitle>
-                                    <Button variant="ghost" size="sm" className="h-7">
-                                        <Filter className="h-3 w-3 mr-1" /> Filter
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="ghost" size="sm" className="h-7">
+                                            <Filter className="h-3 w-3 mr-1" /> Filter
+                                        </Button>
+
+                                        {process.env.NODE_ENV === 'development' && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7"
+                                                onClick={async () => {
+                                                    if (!reportIncident) return;
+                                                    if (!confirm('Seed demo incidents to Firestore? This will add multiple demo entries.')) return;
+                                                    setSeeding(true);
+                                                    try {
+                                                        for (const p of SEED_PAYLOADS) {
+                                                            // spread to avoid accidental references
+                                                            // add small delay to simulate streaming
+                                                            await reportIncident({ ...p });
+                                                            await new Promise(res => setTimeout(res, 250));
+                                                        }
+                                                        alert('Seed complete');
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        alert('Seeding failed. Check console.');
+                                                    } finally {
+                                                        setSeeding(false);
+                                                    }
+                                                }}
+                                            >
+                                                <RefreshCw className="h-3 w-3 mr-1" /> {seeding ? 'Seeding...' : 'Seed Demo'}
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-2">

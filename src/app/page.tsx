@@ -32,7 +32,7 @@ export default function Home() {
             <FeatureCard
               icon={<Users className="h-10 w-10 text-primary" />}
               title="Volunteer Coordination"
-              description="Smart assignment system matching volunteer skills with nearby needs."
+              description="Matching volunteers to nearby needs based on skills."
             />
             <FeatureCard
               icon={<Smartphone className="h-10 w-10 text-primary" />}

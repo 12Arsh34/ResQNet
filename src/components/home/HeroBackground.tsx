@@ -1,66 +1,94 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { useEffect, useState } from "react"
 
 export function HeroBackground() {
+    const [reduceMotion, setReduceMotion] = useState(false)
+
+    useEffect(() => {
+        try {
+            const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+            setReduceMotion(mq.matches)
+            const listener = (e: MediaQueryListEvent) => setReduceMotion(e.matches)
+            mq.addEventListener?.('change', listener)
+            return () => mq.removeEventListener?.('change', listener)
+        } catch (e) {
+            // ignore (server or unsupported)
+        }
+    }, [])
+
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-            {/* Dark Gradient Base */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900/0 via-slate-900/80 to-slate-950 dark:from-slate-900/0 dark:via-slate-900/80 dark:to-slate-950" />
+            {/* High-contrast RGB shapes */}
+            <motion.div
+                initial={{ opacity: 0.18, scale: 1, x: -40 }}
+                animate={reduceMotion ? undefined : { x: [-40, 20, -40], opacity: [0.18, 0.36, 0.18] }}
+                transition={reduceMotion ? undefined : { duration: 36, repeat: Infinity, ease: 'linear' }}
+                className="absolute -left-28 -top-20 w-[80%] h-[70%] transform -rotate-12 bg-gradient-to-tr from-primary to-accent opacity-30 blur-3xl mix-blend-screen"
+            />
 
-            {/* Grid */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+            <motion.div
+                initial={{ opacity: 0.12 }}
+                animate={reduceMotion ? undefined : { x: [0, -30, 0], opacity: [0.12, 0.28, 0.12] }}
+                transition={reduceMotion ? undefined : { duration: 44, repeat: Infinity, ease: 'linear' }}
+                className="absolute right-[-20%] bottom-[-10%] w-[60%] h-[60%] transform rotate-6 bg-gradient-to-br from-accent to-primary opacity-26 blur-3xl mix-blend-overlay"
+            />
 
-            {/* Radar Circles */}
-            <div className="absolute inset-0 flex items-center justify-center top-[-10%] sm:top-[-20%]">
-                <div className="relative w-[80vw] h-[80vw] sm:w-[600px] sm:h-[600px]">
-                    {/* Pulsing Rings */}
-                    {[1, 2, 3].map((i) => (
-                        <motion.div
-                            key={i}
-                            className="absolute inset-0 border border-primary/20 rounded-full"
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{
-                                scale: [0.8, 1.5],
-                                opacity: [0.5, 0],
-                                borderWidth: ["1px", "0px"]
-                            }}
-                            transition={{
-                                duration: 4,
-                                repeat: Infinity,
-                                delay: i * 1.5,
-                                ease: "easeOut"
-                            }}
-                        />
-                    ))}
+            {/* Subtle diagonal pattern for interest */}
+            <div className="absolute inset-0 bg-[repeating-linear-gradient(135deg,rgba(255,255,255,0.01)_0px,rgba(255,255,255,0.01)_1px,transparent_1px,transparent_28px)] pointer-events-none" />
 
-                    {/* Static Rings */}
-                    <div className="absolute inset-0 border border-primary/5 rounded-full scale-100" />
-                    <div className="absolute inset-0 border border-primary/5 rounded-full scale-75" />
-                    <div className="absolute inset-0 border border-primary/5 rounded-full scale-50" />
-                </div>
-            </div>
+            {/* Low-contrast community scene (tinted) */}
+            <motion.img
+                src="/community-scene.svg"
+                alt="Community skyline and activity (decorative)"
+                aria-hidden
+                initial={{ x: 0, opacity: 0.12 }}
+                animate={reduceMotion ? undefined : { x: [0, -10, 0], opacity: [0.12, 0.24, 0.12] }}
+                transition={reduceMotion ? undefined : { duration: 48, repeat: Infinity, ease: 'linear' }}
+                className="absolute left-1/2 top-36 -translate-x-1/2 w-[120%] max-w-none pointer-events-none opacity-18 blur-sm mix-blend-screen" 
+            />
 
-            {/* Floating Blobs */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+            {/* Animated activity markers to add life */}
+            <div aria-hidden className="absolute inset-0 pointer-events-none">
+                {/* Marker 1 */}
                 <motion.div
-                    animate={{
-                        x: [0, 100, 0],
-                        y: [0, -50, 0],
-                        opacity: [0.3, 0.5, 0.3]
-                    }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[100px]"
-                />
+                    initial={{ y: 0, opacity: 0 }}
+                    animate={reduceMotion ? undefined : { y: [0, -12, 0], opacity: [0.9, 1, 0.9] }}
+                    transition={reduceMotion ? undefined : { duration: 4, repeat: Infinity, delay: 0 }}
+                    className="absolute left-[18%] top-[48%] flex items-center justify-center"
+                >
+                    <div className="relative">
+                        <div className="h-3.5 w-3.5 rounded-full bg-gradient-to-r from-primary to-accent shadow-[0_6px_18px_rgba(0,204,204,0.18)]" />
+                        <span className="absolute inset-0 rounded-full animate-ping-slow bg-gradient-to-r from-primary to-accent opacity-30 blur-sm" />
+                    </div>
+                </motion.div>
+
+                {/* Marker 2 */}
                 <motion.div
-                    animate={{
-                        x: [0, -100, 0],
-                        y: [0, 50, 0],
-                        opacity: [0.2, 0.4, 0.2]
-                    }}
-                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                    className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"
-                />
+                    initial={{ y: 0, opacity: 0 }}
+                    animate={reduceMotion ? undefined : { y: [0, -8, 0], opacity: [0.9, 1, 0.9] }}
+                    transition={reduceMotion ? undefined : { duration: 5, repeat: Infinity, delay: 0.8 }}
+                    className="absolute left-[42%] top-[52%] flex items-center justify-center"
+                >
+                    <div className="relative">
+                        <div className="h-4 w-4 rounded-full bg-gradient-to-r from-accent to-primary shadow-[0_6px_18px_rgba(255,85,180,0.14)]" />
+                        <span className="absolute inset-0 rounded-full animate-ping-slow bg-accent/20 blur-sm" />
+                    </div>
+                </motion.div>
+
+                {/* Marker 3 */}
+                <motion.div
+                    initial={{ y: 0, opacity: 0 }}
+                    animate={reduceMotion ? undefined : { y: [0, -10, 0], opacity: [0.9, 1, 0.9] }}
+                    transition={reduceMotion ? undefined : { duration: 4.6, repeat: Infinity, delay: 1.6 }}
+                    className="absolute left-[65%] top-[46%] flex items-center justify-center"
+                >
+                    <div className="relative">
+                        <div className="h-3.5 w-3.5 rounded-full bg-primary shadow-[0_6px_18px_rgba(0,204,204,0.14)]" />
+                        <span className="absolute inset-0 rounded-full animate-ping-slow bg-primary/20 blur-sm" />
+                    </div>
+                </motion.div>
             </div>
         </div>
     )

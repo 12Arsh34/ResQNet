@@ -39,7 +39,6 @@ export function Sidebar() {
                             <SidebarLink href="/citizen" icon={<LayoutDashboard />} label="Overview" active={pathname === '/citizen'} />
                             <SidebarLink href="/citizen/map" icon={<MapIcon />} label="Live Map" active={pathname === '/citizen/map'} />
                             <SidebarLink href="/citizen/report" icon={<ShieldAlert />} label="Report Incident" active={pathname === '/citizen/report'} />
-                            <SidebarLink href="/citizen/alerts" icon={<Bell />} label="My Alerts" active={pathname === '/citizen/alerts'} />
                         </>
                     )}
                     {isVolunteer && (
@@ -51,7 +50,7 @@ export function Sidebar() {
                     )}
                     {isAdmin && (
                         <>
-                            <SidebarLink href="/admin" icon={<BarChart3 />} label="Command Center" active={pathname === '/admin'} />
+                            <SidebarLink href="/admin" icon={<BarChart3 />} label="Coordination Center" active={pathname === '/admin'} />
                             <SidebarLink href="/admin/incidents" icon={<ShieldAlert />} label="Incidents" active={pathname === '/admin/incidents'} />
                             <SidebarLink href="/admin/resources" icon={<Users />} label="Resources" active={pathname === '/admin/resources'} />
                         </>
@@ -59,8 +58,19 @@ export function Sidebar() {
                 </nav>
             </div>
             <div className="border-t p-4">
-                <nav className="grid gap-1">
-                    <SidebarLink href="/settings" icon={<Settings />} label="Settings" active={pathname === '/settings'} />
+                <nav className="grid gap-2">
+                    <Link href="/#features">
+                        <Button variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground hover:text-primary">
+                            <LayoutDashboard className="h-4 w-4" />
+                            Features
+                        </Button>
+                    </Link>
+                    <Link href="/resources">
+                        <Button variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground hover:text-primary">
+                            <ClipboardList className="h-4 w-4" />
+                            Resources
+                        </Button>
+                    </Link>
                     <Link href="/login">
                         <Button variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground hover:text-destructive">
                             <LogOut className="h-4 w-4" />

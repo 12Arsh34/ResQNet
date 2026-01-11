@@ -1,28 +1,117 @@
 "use client"
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import React from 'react';
 import L from 'leaflet';
 import { useIncidents } from '@/hooks/useIncidents';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MOCK_PLACES } from '@/lib/mockPlaces'
 
-// Fix for default marker icon in Next.js
-const iconUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png";
-const iconRetinaUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png";
-const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png";
+// Marker cluster plugin and styles
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+// plugin augments L globally; TypeScript doesn't always have types, ignore errors
+// @ts-ignore
+import 'leaflet.markercluster';
 
-const DefaultIcon = L.icon({
-    iconUrl,
-    iconRetinaUrl,
-    shadowUrl,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    tooltipAnchor: [16, -28],
-    shadowSize: [41, 41]
-});
+// Fix for default marker icon in Next.js and provide colored icons per severity
+const base = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img';
 
-L.Marker.prototype.options.icon = DefaultIcon;
+const ICONS: Record<string, L.Icon> = {
+    Critical: L.icon({
+        iconUrl: `${base}/marker-icon-2x-red.png`,
+        shadowUrl: `${base}/marker-shadow.png`,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+    }),
+    High: L.icon({
+        iconUrl: `${base}/marker-icon-2x-orange.png`,
+        shadowUrl: `${base}/marker-shadow.png`,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+    }),
+    Medium: L.icon({
+        iconUrl: `${base}/marker-icon-2x-yellow.png`,
+        shadowUrl: `${base}/marker-shadow.png`,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+    }),
+    Low: L.icon({
+        iconUrl: `${base}/marker-icon-2x-green.png`,
+        shadowUrl: `${base}/marker-shadow.png`,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+    }),
+};
+
+function ClusterMarkers({ incidents }: { incidents: any[] }) {
+    const map = useMap();
+
+    React.useEffect(() => {
+        if (!map) return;
+
+        const clusterGroup = (L as any).markerClusterGroup ? (L as any).markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 50 }) : (L as any).markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 50 });
+
+        incidents.forEach(incident => {
+            const icon = incident.severity === 'Critical'
+                ? L.divIcon({ html: `<span class=\"marker-pulse\"></span><span class=\"marker-dot\"></span>`, className: 'critical-marker', iconSize: [20, 20], iconAnchor: [10, 10] })
+                : ICONS[incident.severity || 'Medium'];
+
+            const popupHtml = `
+                <div style="max-width:220px;padding:6px;font-size:12px;color:#06202a">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                        <span style="width:8px;height:8px;border-radius:9999px;display:inline-block;${incident.severity === 'Critical' ? 'background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,0.6);' : incident.severity === 'High' ? 'background:#f97316;' : incident.severity === 'Medium' ? 'background:#f59e0b;' : 'background:#10b981;'}"></span>
+                        <strong style="font-size:13px">${incident.type}</strong>
+                    </div>
+                    <div style="font-size:12px;color:#64748b">${incident.description}</div>
+                    <div style="font-size:11px;color:#94a3b8;margin-top:6px">${incident.timestamp?.seconds ? new Date(incident.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</div>
+                </div>
+            `;
+
+            const m = L.marker([incident.lat, incident.lng], { icon }).bindPopup(popupHtml);
+            clusterGroup.addLayer(m);
+        });
+
+        map.addLayer(clusterGroup);
+
+        return () => {
+            try { map.removeLayer(clusterGroup); } catch (e) { /* ignore */ }
+        };
+    }, [map, incidents]);
+
+    return null;
+}
+
+function PlacesMarkers() {
+    const map = useMap()
+
+    React.useEffect(() => {
+        if (!map) return
+        const group = L.layerGroup()
+        for (const p of MOCK_PLACES) {
+            const color = p.type === 'Shelter' ? '#22c55e' : p.type === 'Medical' ? '#00cccc' : p.type === 'Supplies' ? '#ff55b4' : '#f59e0b'
+            const icon = L.divIcon({ html: `<span style="display:inline-block;width:12px;height:12px;border-radius:12px;background:${color};box-shadow:0 6px 18px rgba(0,0,0,0.4)"></span>`, className: '', iconSize: [12, 12], iconAnchor: [6, 6] })
+            const popupHtml = `
+                <div style="max-width:240px;padding:8px;color:var(--foreground)">
+                    <strong style="font-size:13px">${p.name}</strong>
+                    <div style="font-size:12px;color:#94a3b8;margin-top:6px">${p.type} • ${p.address ?? ''}</div>
+                    <div style="font-size:12px;color:#94a3b8;margin-top:6px">Capacity: ${p.available ?? '-'} / ${p.capacity ?? '-'}</div>
+                </div>
+            `
+            const m = L.marker([p.lat, p.lng], { icon }).bindPopup(popupHtml)
+            group.addLayer(m)
+        }
+        map.addLayer(group)
+        return () => { try { map.removeLayer(group) } catch (e) {} }
+    }, [map])
+
+    return null
+}
 
 export default function LeafletMapInner() {
     const { incidents, loading } = useIncidents();
@@ -33,8 +122,8 @@ export default function LeafletMapInner() {
 
     return (
         <MapContainer
-            center={[40.7128, -74.0060]}
-            zoom={13}
+            center={[19.0760, 72.8777]}
+            zoom={12}
             style={{ height: '100%', width: '100%' }}
             className="z-0"
         >
@@ -42,22 +131,17 @@ export default function LeafletMapInner() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {incidents.map(incident => (
-                <Marker key={incident.id} position={[incident.lat, incident.lng]}>
-                    <Popup>
-                        <div className="p-1 max-w-[200px]">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className={`inline-block w-2.5 h-2.5 rounded-full ${incident.severity === 'Critical' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : incident.severity === 'High' ? 'bg-orange-500' : 'bg-blue-500'}`}></span>
-                                <strong className="text-sm">{incident.type}</strong>
-                            </div>
-                            <p className="text-xs text-muted-foreground">{incident.description}</p>
-                            <div className="mt-2 text-[10px] text-slate-400">
-                                {incident.timestamp?.seconds ? new Date(incident.timestamp.seconds * 1000).toLocaleString() : 'Just now'}
-                            </div>
-                        </div>
-                    </Popup>
-                </Marker>
-            ))}
+
+            <div className="leaflet-legend pointer-events-auto">
+                <div className="item"><span className="dot red" /> Critical</div>
+                <div className="item"><span className="dot orange" /> High</div>
+                <div className="item"><span className="dot yellow" /> Medium</div>
+                <div className="item"><span className="dot green" /> Low</div>
+            </div>
+
+            {/* Markers are added to a marker-cluster group for performance and UX */}
+            <ClusterMarkers incidents={incidents} />
+            <PlacesMarkers />
         </MapContainer>
     );
 }
