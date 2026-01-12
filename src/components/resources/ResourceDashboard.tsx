@@ -26,6 +26,26 @@ function aggregateFromPlaces() {
   return Object.entries(map).map(([k, v]) => ({ key: k, total: v.total, available: v.available }))
 }
 
+// Tooltip types from recharts simplified for our usage
+type TooltipPayloadItem = { dataKey: string; value: number }
+export function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayloadItem[]; label?: string | number }) {
+  if (!active || !payload || !payload.length) return null
+  return (
+    <div style={{ background: 'rgba(6,10,25,0.95)', color: 'var(--foreground)', padding: 12, borderRadius: 8, minWidth: 160 }}>
+      <div style={{ fontSize: 13, marginBottom: 8, opacity: 0.9 }}>{label}</div>
+      {payload.map((p) => (
+        <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 6, display: 'inline-block' }} />
+            <div style={{ fontSize: 13, opacity: 0.9 }}>{p.dataKey}</div>
+          </div>
+          <div style={{ fontWeight: 600 }}>{p.value}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ResourceDashboard({ initialStats }: { initialStats?: ResourceStat[] } = {}) {
   const starting = initialStats && initialStats.length ? initialStats : aggregateFromPlaces()
   const [data, setData] = useState(() => starting.map(d => ({ ...d })))
@@ -60,25 +80,6 @@ export function ResourceDashboard({ initialStats }: { initialStats?: ResourceSta
   // Colors: make available clearly visible (green) and deployed in warm orange
   const availableColor = (typeof window !== 'undefined') ? (getComputedStyle(document.documentElement).getPropertyValue('--available') || '#22c55e') : '#22c55e'
   const deployedColor = (typeof window !== 'undefined') ? (getComputedStyle(document.documentElement).getPropertyValue('--deployed') || '#f59e0b') : '#f59e0b'
-
-  // Custom tooltip component to render color-coded rows
-  function CustomTooltip({ active, payload, label }: any) {
-    if (!active || !payload || !payload.length) return null
-    return (
-      <div style={{ background: 'rgba(6,10,25,0.95)', color: 'var(--foreground)', padding: 12, borderRadius: 8, minWidth: 160 }}>
-        <div style={{ fontSize: 13, marginBottom: 8, opacity: 0.9 }}>{label}</div>
-        {payload.map((p: any) => (
-          <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 6, display: 'inline-block', background: p.dataKey === 'Available' ? availableColor : deployedColor }} />
-              <div style={{ fontSize: 13, opacity: 0.9 }}>{p.dataKey}</div>
-            </div>
-            <div style={{ fontWeight: 600 }}>{p.value}</div>
-          </div>
-        ))}
-      </div>
-    )
-  }
 
   return (
     <Card className="col-span-full">

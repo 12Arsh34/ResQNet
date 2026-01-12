@@ -4,15 +4,15 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import React from 'react';
 import L from 'leaflet';
-import { useIncidents } from '@/hooks/useIncidents';
+import { useIncidents, type Incident } from '@/hooks/useIncidents';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MOCK_PLACES } from '@/lib/mockPlaces'
 
 // Marker cluster plugin and styles
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
-// plugin augments L globally; TypeScript doesn't always have types, ignore errors
-// @ts-ignore
+// plugin augments L globally; TypeScript doesn't always have types, expect an error if not available
+// @ts-expect-error - leaflet.markercluster has no types
 import 'leaflet.markercluster';
 
 // Fix for default marker icon in Next.js and provide colored icons per severity
@@ -49,23 +49,26 @@ const ICONS: Record<string, L.Icon> = {
     }),
 };
 
-function ClusterMarkers({ incidents }: { incidents: any[] }) {
+function ClusterMarkers({ incidents }: { incidents: Incident[] }) {
     const map = useMap();
 
     React.useEffect(() => {
         if (!map) return;
 
-        const clusterGroup = (L as any).markerClusterGroup ? (L as any).markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 50 }) : (L as any).markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 50 });
+        const _mcl = (L as unknown as { markerClusterGroup?: (opts?: { showCoverageOnHover?: boolean, maxClusterRadius?: number }) => unknown }).markerClusterGroup;
+        const clusterGroup = _mcl ? _mcl({ showCoverageOnHover: false, maxClusterRadius: 50 }) : _mcl && _mcl({ showCoverageOnHover: false, maxClusterRadius: 50 });
 
         incidents.forEach(incident => {
             const icon = incident.severity === 'Critical'
-                ? L.divIcon({ html: `<span class=\"marker-pulse\"></span><span class=\"marker-dot\"></span>`, className: 'critical-marker', iconSize: [20, 20], iconAnchor: [10, 10] })
+                ? L.divIcon({ html: `<span class="marker-pulse"></span><span class="marker-dot"></span>`, className: 'critical-marker', iconSize: [20, 20], iconAnchor: [10, 10] })
                 : ICONS[incident.severity || 'Medium'];
+
+            const severityColor = incident.severity === 'Critical' ? '#ef4444' : incident.severity === 'High' ? '#f97316' : incident.severity === 'Medium' ? '#f59e0b' : '#10b981';
 
             const popupHtml = `
                 <div style="max-width:220px;padding:6px;font-size:12px;color:#06202a">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                        <span style="width:8px;height:8px;border-radius:9999px;display:inline-block;${incident.severity === 'Critical' ? 'background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,0.6);' : incident.severity === 'High' ? 'background:#f97316;' : incident.severity === 'Medium' ? 'background:#f59e0b;' : 'background:#10b981;'}"></span>
+                        <span style="width:8px;height:8px;border-radius:9999px;display:inline-block;background:${severityColor};"></span>
                         <strong style="font-size:13px">${incident.type}</strong>
                     </div>
                     <div style="font-size:12px;color:#64748b">${incident.description}</div>
@@ -80,7 +83,7 @@ function ClusterMarkers({ incidents }: { incidents: any[] }) {
         map.addLayer(clusterGroup);
 
         return () => {
-            try { map.removeLayer(clusterGroup); } catch (e) { /* ignore */ }
+            try { map.removeLayer(clusterGroup); } catch { /* ignore */ }
         };
     }, [map, incidents]);
 
@@ -107,7 +110,7 @@ function PlacesMarkers() {
             group.addLayer(m)
         }
         map.addLayer(group)
-        return () => { try { map.removeLayer(group) } catch (e) {} }
+        return () => { try { map.removeLayer(group) } catch { } }
     }, [map])
 
     return null

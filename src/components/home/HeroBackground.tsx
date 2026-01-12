@@ -4,16 +4,22 @@ import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
 
 export function HeroBackground() {
-    const [reduceMotion, setReduceMotion] = useState(false)
+    const [reduceMotion, setReduceMotion] = useState(() => {
+        if (typeof window === 'undefined') return false
+        try {
+            return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        } catch (e) {
+            return false
+        }
+    })
 
     useEffect(() => {
         try {
             const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-            setReduceMotion(mq.matches)
             const listener = (e: MediaQueryListEvent) => setReduceMotion(e.matches)
             mq.addEventListener?.('change', listener)
             return () => mq.removeEventListener?.('change', listener)
-        } catch (e) {
+        } catch {
             // ignore (server or unsupported)
         }
     }, [])

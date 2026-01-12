@@ -1,11 +1,31 @@
+"use client"
+
 import Link from "next/link"
 import { Navbar } from "@/components/layout/Navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, MapPin, Activity, ArrowRight } from "lucide-react"
+import { useIncidents } from '@/hooks/useIncidents'
+import { MOCK_PLACES } from '@/lib/mockPlaces'
 
+import { findNearestPlace } from '@/lib/utils'
 export default function CitizenPage() {
+  const { incidents } = useIncidents();
+  const critical = incidents.filter(i => i.severity === 'Critical').length;
+  const high = incidents.filter(i => i.severity === 'High').length;
+  const total = incidents.length;
+
+  const threat = critical > 0 ? { label: 'Severe', className: 'text-destructive' } : high >= 2 ? { label: 'Moderate', className: 'text-orange-500' } : { label: 'Low', className: 'text-green-600' };
+
+  // nearest shelter derived from incidents (choose nearest incident then nearest shelter)
+  let nearestShelterText = 'No shelter data';
+  if (incidents.length > 0) {
+    const first = incidents[0];
+    const { place, distanceKm } = findNearestPlace(first.lat, first.lng, MOCK_PLACES.filter(p => p.type === 'Shelter'));
+    if (place) nearestShelterText = `${place.name} · ${distanceKm.toFixed(1)} km`;
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -28,8 +48,8 @@ export default function CitizenPage() {
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-500">Moderate</div>
-                <p className="text-xs text-muted-foreground">Updated 10 minutes ago</p>
+                <div className={`text-2xl font-bold ${threat.className}`}>{threat.label}</div>
+                <p className="text-xs text-muted-foreground">Updated just now</p>
               </CardContent>
             </Card>
             <Card>
@@ -38,8 +58,8 @@ export default function CitizenPage() {
                 <MapPin className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">1.2 km</div>
-                <p className="text-xs text-muted-foreground">Community Center, Main St.</p>
+                <div className="text-2xl font-bold">{nearestShelterText}</div>
+                <p className="text-xs text-muted-foreground">Based on nearest active incident</p>
               </CardContent>
             </Card>
             <Card>
@@ -48,8 +68,8 @@ export default function CitizenPage() {
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">3</div>
-                <p className="text-xs text-muted-foreground">In your 5km radius</p>
+                <div className="text-2xl font-bold">{total}</div>
+                <p className="text-xs text-muted-foreground">Active in the dataset</p>
               </CardContent>
             </Card>
           </div>
