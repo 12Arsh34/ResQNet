@@ -124,7 +124,20 @@ export default function ResourcesPage() {
     )
 }
 
-function ResourceCard({ resource }: { resource: any }) {
+type Resource = {
+    id: string
+    name: string
+    type: string
+    status: string
+    capacity: string
+    distance: string
+    address: string
+    phone: string
+    icon: React.ComponentType<unknown>
+    color: string
+}
+
+function ResourceCard({ resource }: { resource: Resource }) {
     const Icon = resource.icon
 
     return (

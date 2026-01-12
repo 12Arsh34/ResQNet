@@ -7,12 +7,19 @@ import { Badge } from "@/components/ui/badge"
 import { MapPin, Camera, AlertTriangle, Send } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useIncidents } from '@/hooks/useIncidents'
 
 export default function ReportIncidentPage() {
     const router = useRouter()
+    const { reportIncident } = useIncidents()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const fileInputRef = useRef<HTMLInputElement | null>(null)
     const [files, setFiles] = useState<{ file: File; preview: string }[]>([])
+
+    const [selectedType, setSelectedType] = useState<string>('Other')
+    const [selectedSeverity, setSelectedSeverity] = useState<'Critical'|'High'|'Medium'|'Low'>('High')
+    const [coords, setCoords] = useState<string>('19.0760,72.8777')
+    const [description, setDescription] = useState<string>('')
 
     useEffect(() => {
         return () => {
@@ -29,17 +36,29 @@ export default function ReportIncidentPage() {
         })
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
-        // Collect files into FormData for upload (replace with real upload logic as needed)
-        const formData = new FormData()
-        files.forEach((f) => formData.append('evidence', f.file))
-        console.log('Submitting report with files:', files.map(f => f.file.name))
-        setTimeout(() => {
+        const [latStr, lngStr] = coords.split(',').map(s => s.trim())
+        const lat = parseFloat(latStr) || 19.0760
+        const lng = parseFloat(lngStr) || 72.8777
+
+        try {
+            await reportIncident({
+                type: selectedType,
+                severity: selectedSeverity,
+                description: description || 'Reported via Citizen report',
+                lat,
+                lng
+            })
+            alert('Report submitted. Thank you.');
             setIsSubmitting(false)
             router.push('/citizen')
-        }, 2000)
+        } catch (err) {
+            console.error('Failed to submit report', err)
+            alert('Failed to submit report')
+            setIsSubmitting(false)
+        }
     }
 
     return (
@@ -62,19 +81,19 @@ export default function ReportIncidentPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                                <TypeSelect label="Fire" icon="🔥" />
-                                <TypeSelect label="Flood" icon="💧" />
-                                <TypeSelect label="Medical" icon="🚑" />
-                                <TypeSelect label="Structure" icon="🏚️" />
-                                <TypeSelect label="Violence" icon="⚔️" />
-                                <TypeSelect label="Other" icon="❓" />
+                                <TypeSelect label="Fire" icon="🔥" selected={selectedType === 'Fire'} onSelect={() => setSelectedType('Fire')} />
+                                <TypeSelect label="Flood" icon="💧" selected={selectedType === 'Flood'} onSelect={() => setSelectedType('Flood')} />
+                                <TypeSelect label="Medical" icon="🚑" selected={selectedType === 'Medical'} onSelect={() => setSelectedType('Medical')} />
+                                <TypeSelect label="Structure" icon="🏚️" selected={selectedType === 'Structure'} onSelect={() => setSelectedType('Structure')} />
+                                <TypeSelect label="Violence" icon="⚔️" selected={selectedType === 'Violence'} onSelect={() => setSelectedType('Violence')} />
+                                <TypeSelect label="Other" icon="❓" selected={selectedType === 'Other'} onSelect={() => setSelectedType('Other')} />
                             </div>
                             <div className="pt-2">
                                 <label className="text-sm font-medium mb-2 block">Severity Assessment</label>
                                 <div className="flex gap-4">
-                                    <Badge variant="outline" className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 p-2 px-4">Low</Badge>
-                                    <Badge variant="warning" className="cursor-pointer bg-amber-500 hover:bg-amber-600 p-2 px-4">Medium</Badge>
-                                    <Badge variant="destructive" className="cursor-pointer hover:bg-red-700 p-2 px-4 border-2 border-transparent hover:border-black">Critical</Badge>
+                                    <Badge onClick={() => setSelectedSeverity('Low')} className={`cursor-pointer p-2 px-4 ${selectedSeverity === 'Low' ? 'bg-primary/5 ring-1 ring-primary' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Low</Badge>
+                                    <Badge onClick={() => setSelectedSeverity('Medium')} className={`cursor-pointer p-2 px-4 ${selectedSeverity === 'Medium' ? 'bg-amber-500 text-white' : 'bg-amber-200'}`}>Medium</Badge>
+                                    <Badge onClick={() => setSelectedSeverity('Critical')} className={`cursor-pointer p-2 px-4 ${selectedSeverity === 'Critical' ? 'bg-red-600 text-white' : ''}`}>Critical</Badge>
                                 </div>
                             </div>
                         </CardContent>
@@ -92,7 +111,7 @@ export default function ReportIncidentPage() {
                                 <div className="absolute left-3 top-3 text-muted-foreground">
                                     <MapPin className="h-4 w-4" />
                                 </div>
-                                <Input className="pl-9" placeholder="Enter location or use current GPS" />
+                                <Input value={coords} onChange={(e) => setCoords(e.target.value)} className="pl-9" placeholder="lat,lng e.g. 19.0760,72.8777" />
                             </div>
                             <div>
                                 <input
@@ -152,7 +171,7 @@ export default function ReportIncidentPage() {
                             </div>
                             <div>
                                 <label className="text-sm font-medium mb-2 block">Description</label>
-                                <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" placeholder="Describe the situation..." />
+                                <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" placeholder="Describe the situation..." />
                             </div>
                         </CardContent>
                     </Card>
@@ -175,11 +194,10 @@ export default function ReportIncidentPage() {
     )
 }
 
-function TypeSelect({ label, icon }: { label: string, icon: string }) {
-    const [selected, setSelected] = useState(false)
+function TypeSelect({ label, icon, selected, onSelect }: { label: string, icon: string, selected?: boolean, onSelect?: () => void }) {
     return (
         <div
-            onClick={() => setSelected(!selected)}
+            onClick={() => onSelect && onSelect()}
             className={`border rounded-md p-3 flex flex-col items-center gap-2 cursor-pointer transition-all ${selected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}
         >
             <span className="text-2xl">{icon}</span>

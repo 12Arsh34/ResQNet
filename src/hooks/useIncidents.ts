@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { SEED_PAYLOADS } from '@/lib/mockIncidents';
 
@@ -108,5 +108,22 @@ export function useIncidents() {
         });
     };
 
-    return { incidents, loading, reportIncident };
+    const resolveIncident = async (id: string) => {
+        // Mark as resolved by deleting the document in Firestore, or removing from mock state
+        if (!db) {
+            setIncidents(prev => prev.filter(i => i.id !== id));
+            return;
+        }
+
+        try {
+            const d = doc(db, 'incidents', id);
+            await deleteDoc(d);
+        } catch (err) {
+            console.error('Failed to resolve incident:', err);
+            // As a fallback, remove locally
+            setIncidents(prev => prev.filter(i => i.id !== id));
+        }
+    };
+
+    return { incidents, loading, reportIncident, resolveIncident };
 }

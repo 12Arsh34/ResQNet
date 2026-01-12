@@ -14,15 +14,21 @@ export default function RegisterPage() {
     const [loading, setLoading] = useState(false)
     const [role, setRole] = useState("citizen")
 
-    const handleRegister = (e: React.FormEvent) => {
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
-        setTimeout(() => {
+        setTimeout(async () => {
             setLoading(false)
-            // Redirect based on role
-            if (role === 'volunteer') router.push('/volunteer')
-            else if (role === 'admin') router.push('/admin')
-            else router.push('/citizen')
+            // Redirect based on role (with logging + fallback)
+            const target = role === 'volunteer' ? '/volunteer' : role === 'admin' ? '/admin' : '/citizen'
+            try {
+                await router.push(target)
+                console.log('[register] navigated to', target)
+            } catch (err) {
+                console.error('[register] router.push error', err)
+                // Fallback to full page navigation in case client routing fails
+                window.location.assign(target)
+            }
         }, 1500)
     }
 
